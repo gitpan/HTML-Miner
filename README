@@ -1,15 +1,182 @@
 HTML-Miner
 
-The README is used to introduce the module and provide instructions on
-how to install the module, any machine dependencies it may have (for
-example C compilers and installed libraries) and any other information
-that should be provided before the module is installed.
+NAME 
 
-A README file is required for CPAN modules since CPAN extracts the README
-file from a module distribution so that people browsing the archive
-can use it to get an idea of the module's uses. It is usually a good idea
-to provide version information here so that people can decide whether
-fixes for the module are worth downloading.
+	HTML::Miner - This Module 'Mines' (hopefully) useful information for an URL or HTML snippet.
+
+VERSION 
+
+	Version 0.03
+
+SYNOPSIS 
+
+	HTML::Miner 'Mines' (hopefully) useful information for an URL or HTML snippet. The following is a list of HTML elements that can be extracted:
+
+	Find all links and for each link extract:
+
+	     URL Title
+	     URL href
+	     URL Anchor Text
+	     URL Domain
+	     URL Protocol
+	     URL URI
+	     URL Absolute location
+	     Find all images and for each image extract:
+	     IMG Source URL
+	     IMG Absolute Source URL
+	     IMG Source Domain
+	     Extracts Meta Elements such as
+	     Page Title
+	     Page Description
+	     Page Keywords
+	     Page RSS Feeds
+	     Finds the final destination URL of a potentially redirecting URL.
+
+
+	Example ( Object Oriented Usage )
+
+	     use HTML::Miner;
+
+	     my $html = "some html";
+    	     # or $html = do{local $/;<DATA>}; with __DATA__ provided
+
+    	     my $foo = HTML::Miner->new ( 
+
+      	     	CURRENT_URL                   => 'www.perl.org'   , 
+      		CURRENT_URL_HTML              => $html 
+
+    	     );
+
+
+    	     my $meta_data =  $html_miner->get_meta_elements() ;
+	     my $links = $html_miner->get_links();
+    	     my $images = $html_miner->get_images();
+    	     my ( $clear_url, $protocol, $domain, $uri ) = $html_miner->break_url();  
+
+    	     my $out = HTML::Miner::get_redirect_destination( "redirectingurl_here.html" ) ;
+
+    	     my $out = HTML::Miner::get_absolute_url( "www.perl.com/help/faq/", "../../about/" );
+
+
+	Example ( Direct access of Methods )
+
+             use HTML::Miner;
+
+    	     my $html = "some html";
+    	     # or $html = do{local $/;<DATA>}; with __DATA__ provided
+
+    	     my $url = "http://www.perl.org";
+
+    	     my $meta_data =  HTML::Miner::get_meta_elements( $url, $html ) ;
+    	     my $links = HTML::Miner::get_links( $url, $html );
+    	     my $images = HTML::Miner::get_images( $url, $html );
+    	     my ( $clear_url, $protocol, $domain, $uri ) = HTML::Minerbreak_url( $url );  
+
+    	     my $out = HTML::Miner::get_redirect_destination( "redirectingurl_here.html" ) ;
+
+    	     my $out = HTML::Miner::get_absolute_url( "www.perl.com/help/faq/", "../../about/" );
+
+
+	Testing HTML
+
+		    __DATA__
+
+		      <html>
+		         <head>
+			     <title>SiteTitle</title>
+			     <meta name="description" content="desc of site" />
+			     <meta name="keywords"    content="kw1, kw2, kw3" />
+          		     <link rel="alternate" type="application/atom+xml" title="Title" href="http://www.my_domain_to_mine.com/feed/atom/" />
+          		     <link rel="alternate" type="application/rss+xml" title="Title" href="http://www.othersite.com/feed/" />
+          		     <link rel="alternate" type="application/rdf+xml" title="Title" href="my_domain_to_mine.com/feed/" /> 
+          		     <link rel="alternate" type="text/xml" title="Title" href="http://www.other.org/feed/rss/" />
+      			 </head>
+      			 <body>
+      
+		             <a href="http://linkone.com">Link1</a>
+      			     <a href="link2.html" TITLE="title2" >Link2</a>
+      			     <a href="/link3">Link3</a>
+      
+      
+			     <img src="http://my_domain_to_mine.com/logo_plain.jpg" >
+      			     <img alt="image2" src="http://my_domain_to_mine.com/image2.jpg" />
+      			     <img src="http://my_other.com/image3.jpg" alt="link3">
+      			     <img src="image3.jpg" alt="link3">
+      
+      
+			</body>
+      		     </html>
+
+
+	Example Outputs
+
+    		my $meta_data =  $html_miner->get_meta_elements() ;
+
+		# $meta_data->{ TITLE }             =>   "SiteTitle"
+    		# $meta_data->{ DESC }              =>   "desc of site"
+    		# $meta_data->{ KEYWORDS }->[0]     =>   "kw1"
+    		# $meta_data->{ RSS }->[0]->{TYPE}  =>   "application/atom+xml"
+
+
+
+    		my $links = $html_miner->get_links();
+
+    		# $links->[0]->{ DOMAIN }         =>   "linkone.com"
+    		# $links->[0]->{ ANCHOR }         =>   "Link1"
+    		# $links->[2]->{ ABS_URL   }      =>   "http://my_domain_to_mine.com/link3"
+    		# $links->[1]->{ DOMAIN_IS_BASE } =>   1
+    		# $links->[1]->{ TITLE }          =>   "title2"
+
+
+
+    		my $images = $html_miner->get_images();
+
+    		# $images->[0]->{ IMG_LOC }     =>  "http://my_domain_to_mine.com/logo_plain.jpg"
+    		# $images->[2]->{ ALT }         =>  "link3"
+    		# $images->[0]->{ IMG_DOMAIN }  =>  "my_domain_to_mine.com"
+    		# $images->[3]->{ ABS_LOC }     =>  "http://my_domain_to_mine.com/image3.jpg"
+
+
+
+    		my ( $clear_url, $protocol, $domain, $uri ) = $html_miner->break_url();  
+
+    		# $clear_url   =>  "http://my_domain_to_mine.com/my_page_to_mine.pl"
+    		# $protocol    =>  "http"
+    		# $domain      =>  "my_domain_to_mine.com"
+    		# $uri         =>  "/my_page_to_mine.pl"
+
+
+
+    		HTML::Miner::get_redirect_destination( "redirectingurl_here.html" ) => 'redirected_to'
+
+    		my $out = HTML::Miner::get_absolute_url( "www.perl.com/help/faq/", "../../about/" );
+    		# $out    => "http://www.perl.com/about/"
+
+    		$out = HTML::Miner::get_absolute_url( "www.perl.com/help/faq/index.html", "index2.html" );
+    		# $out    => "http://www.perl.com/help/faq/index2.html"
+
+    		$out = HTML::Miner::get_absolute_url( "www.perl.com/help/faq/", "../../index.html" );
+    		# $out    => "http://www.perl.com/index.html"
+
+    		$out = HTML::Miner::get_absolute_url( "www.perl.com/help/faq/", "/about/" );
+    		# $out    => "http://www.perl.com/about/"
+
+    		$out = HTML::Miner::get_absolute_url( "www.perl.comhelp/faq/", "http://othersite.com" );
+    		# $out    => "http://othersite.com/"
+
+
+
+EXPORT 
+
+This Module does not export anything through @EXPORT, however does export the following function through @EXPORT_OK
+
+     get_links
+     get_absolute_url
+     break_url
+     get_redirect_destination
+     get_images
+     get_meta_elements
+
 
 
 INSTALLATION

@@ -18,8 +18,7 @@ Version 0.01
 
 =cut
 
-our $VERSION = '0.01';
-
+our $VERSION = '0.03';
 
 =head1 SYNOPSIS
 
@@ -1330,7 +1329,11 @@ sub _convert_to_valid_url {
         $uri           = "/" . $4 ;
 
 	croak "URL - $url - Malformed! Sorry I tried to fix it but could not!\n"
-	    unless( $domain_name =~ m/[a-z]+[a-z0-9-]*\.[a-z]+/ );
+	    unless( 
+		( $domain_name =~ m/[a-z]+[a-z0-9-]*\.[a-z]+/ )
+		or
+		( $domain_name =~ m/\d+\.\d+\.\d+\.\d+/       ) ## Bug id 62877
+	    );
 
     } else {
         croak "URL - $url - Malformed! Sorry I tried to fix it but could not!\n";
@@ -1380,12 +1383,6 @@ L<http://search.cpan.org/dist/HTML-Miner/>
 
 =back
 
-
-=head1 ACKNOWLEDGEMENTS
-
-The Guys over at PerlMonks ( L<http://www.perlmonks.org/> ) were very helpful. Special thanks to bart, Marshall, ELISHEVA, and james2vegas. 
-
-
 =head1 COPYRIGHT & LICENSE
 
 Copyright (C) 2009 4am Design and Technology Labs Pvt. Ltd. (L<http://www.4am.co.in/>), all rights reserved.
@@ -1393,10 +1390,7 @@ Copyright (C) 2009 4am Design and Technology Labs Pvt. Ltd. (L<http://www.4am.co
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
-
 =cut
 
 1; # End of HTML::Miner
 
-
- 

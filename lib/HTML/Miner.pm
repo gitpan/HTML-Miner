@@ -1,9 +1,9 @@
 package HTML::Miner                ;
 
-
 use Carp                           ;
 use strict                         ;
 use warnings                       ;
+
 use Exporter                       ;
 
 
@@ -14,18 +14,18 @@ HTML::Miner - This Module 'Mines' (hopefully) useful information for an URL or H
 
 =head1 VERSION
 
-Version 0.01
+Version 0.05
 
 =cut
 
-our $VERSION = '0.03';
+our $VERSION = '0.05';
 
 =head1 SYNOPSIS
 
 HTML::Miner 'Mines' (hopefully) useful information for an URL or HTML snippet. The following is a 
 list of HTML elements that can be extracted:
 
-=over 4
+=over 5
 
 =item * 
 
@@ -83,9 +83,11 @@ Extracts Meta Elements such as
 
 Finds the final destination URL of a potentially redirecting URL.
 
-=back
+=item * 
 
+Find all JS and CSS files used withing the HTML and find their absolute URL if required.
 
+=back 
 
 
 Example ( Object Oriented Usage )
@@ -95,7 +97,7 @@ Example ( Object Oriented Usage )
     my $html = "some html";
     # or $html = do{local $/;<DATA>}; with __DATA__ provided
 
-    my $foo = HTML::Miner->new ( 
+    my $html_miner = HTML::Miner->new ( 
 
       CURRENT_URL                   => 'www.perl.org'   , 
       CURRENT_URL_HTML              => $html 
@@ -103,10 +105,13 @@ Example ( Object Oriented Usage )
     );
 
 
-    my $meta_data =  $html_miner->get_meta_elements() ;
-    my $links = $html_miner->get_links();
-    my $images = $html_miner->get_images();
+    my $meta_data =  $html_miner->get_meta_elements()   ;
+    my $links     = $html_miner->get_links()            ;
+    my $images    = $html_miner->get_images()           ;
+
     my ( $clear_url, $protocol, $domain, $uri ) = $html_miner->break_url();  
+
+    my $css_and_js =  $html_miner->get_page_css_and_js() ;
 
     my $out = HTML::Miner::get_redirect_destination( "redirectingurl_here.html" ) ;
 
@@ -122,10 +127,17 @@ Example ( Direct access of Methods )
 
     my $url = "http://www.perl.org";
 
-    my $meta_data =  HTML::Miner::get_meta_elements( $url, $html ) ;
-    my $links = HTML::Miner::get_links( $url, $html );
-    my $images = HTML::Miner::get_images( $url, $html );
+    my $meta_data  = HTML::Miner::get_meta_elements( $url, $html ) ;
+    my $links      = HTML::Miner::get_links( $url, $html )         ;
+    my $images     = HTML::Miner::get_images( $url, $html )        ;
+
     my ( $clear_url, $protocol, $domain, $uri ) = HTML::Minerbreak_url( $url );  
+
+    my $css_and_js = get_page_css_and_js( 
+           URL                       =>    $url                     , 
+           HTML                      =>    $optionally_html_of_url  ,   
+           CONVERT_URLS_TO_ABS       =>    0/1                      ,  [ Optional argument, default is 1 ]
+    );
 
     my $out = HTML::Miner::get_redirect_destination( "redirectingurl_here.html" ) ;
 
@@ -147,6 +159,10 @@ Testing HTML
           <link rel="alternate" type="application/rss+xml" title="Title" href="http://www.othersite.com/feed/" />
           <link rel="alternate" type="application/rdf+xml" title="Title" href="my_domain_to_mine.com/feed/" /> 
           <link rel="alternate" type="text/xml" title="Title" href="http://www.other.org/feed/rss/" />
+          <script type="text/javascript" src="http://static.myjsdomain.com/frameworks/barlesque.js"></script>
+          <script type="text/javascript" src="http://js.revsci.net/gateway/gw.js?csid=J08781"></script>
+          <script type="text/javascript" src="/about/other.js"></script>
+          <link rel="stylesheet" type="text/css" href="http://static.mycssdomain.com/frameworks/style/main.css"  />
       </head>
       <body>
       
@@ -168,7 +184,7 @@ Testing HTML
 
 
 
-Example Outputs
+Example Output:
 
 
     my $meta_data =  $html_miner->get_meta_elements() ;
@@ -199,6 +215,43 @@ Example Outputs
 
 
 
+    my $css_and_js =  $html_miner->get_page_css_and_js(
+         CONVERT_URLS_TO_ABS       =>    0
+    );
+
+    # $css_and_js will contain:
+    #    {
+    #      CSS => [
+    #         "http://static.mycssdomain.com/frameworks/style/main.css",
+    # 	      "/rel_cssfile.css",
+    #        ],
+    #      JS  => [
+    # 	       "http://static.myjsdomain.com/frameworks/barlesque.js",
+    #          "http://js.revsci.net/gateway/gw.js?csid=J08781",
+    #          "/about/rel_jsfile.js",
+    #        ],
+    #    }
+
+
+    my $css_and_js =  $html_miner->get_page_css_and_js(
+         CONVERT_URLS_TO_ABS       =>    1
+    );
+
+    # $css_and_js will contain:
+    #    {
+    #      CSS => [
+    #         "http://static.mycssdomain.com/frameworks/style/main.css",
+    # 	      "http://www.perl.org/rel_cssfile.css",
+    #        ],
+    #      JS  => [
+    # 	       "http://static.myjsdomain.com/frameworks/barlesque.js",
+    #          "http://js.revsci.net/gateway/gw.js?csid=J08781",
+    #          "http://www.perl.org/about/rel_jsfile.js",
+    #        ],
+    #    }
+
+
+
     my ( $clear_url, $protocol, $domain, $uri ) = $html_miner->break_url();  
 
     # $clear_url   =>  "http://my_domain_to_mine.com/my_page_to_mine.pl"
@@ -226,15 +279,15 @@ Example Outputs
     $out = HTML::Miner::get_absolute_url( "www.perl.comhelp/faq/", "http://othersite.com" );
     # $out    => "http://othersite.com/"
 
-    
+
 
 
 =head1 EXPORT
 
 This Module does not export anything through @EXPORT, however does export the 
-following function through @EXPORT_OK
+following functions through @EXPORT_OK
 
-=over 6
+=over 7
 
 =item get_links
 
@@ -248,13 +301,15 @@ following function through @EXPORT_OK
 
 =item get_meta_elements
 
+=item get_page_css_and_js
+
 =back
 
 =cut
 
 our @ISA = qw(Exporter);
 
-our @EXPORT_OK = qw( get_links get_absolute_url break_url get_redirect_destination get_images get_meta_elements );
+our @EXPORT_OK = qw( get_links get_absolute_url break_url get_redirect_destination get_images get_meta_elements get_page_css_and_js );
 
 =head1 FUNCTIONS
 
@@ -273,7 +328,7 @@ The constructor takes the following parameters:
       ## Optional, will be extracted if this is not provided. 
       CURRENT_URL_HTML              => 'long string here'                                     ,  
       ## Will use default if not provided, 
-      USER_AGENT                    => 'Perl_HTML_Miner/0.01'                                 ,  
+      USER_AGENT                    => 'Perl_HTML_Miner/$VERSION'                             ,  
       ## Will use default if not provided, 
       TIMEOUT                       => 5                                                      ,
 
@@ -301,7 +356,7 @@ my \$foo = HTML::Miner->new (
    CURRENT_URL                   => 'www.site_i_am_crawling.com/page_i_am_crawling.html'    ,  ## New will croak if this is not provided. 
    CURRENT_URL_HTML              => 'long string here'                                      ,  ## Optional, will be extracted if this is not provided. 
 
-   USER_AGENT                    => 'Perl_HTML_Miner/0.01'                                   ,  ## Will use default if not provided, 
+   USER_AGENT                    => 'Perl_HTML_Miner/$VERSION'                              ,  ## Will use default if not provided, 
    TIMEOUT                       => 5                                                       ,
 
    DEBUG                         => 0                                                       ,
@@ -325,7 +380,7 @@ my \$foo = HTML::Miner->new (
     my $require_extract = 1      
 	unless( $parameter_hash{ CURRENT_URL_HTML               }   ) ;
 
-    $parameter_hash{USER_AGENT} = 'Perl_HTML_Miner/0.01'  
+    $parameter_hash{USER_AGENT} = 'Perl_HTML_Miner/'.$VERSION  
 	unless( $parameter_hash{ USER_AGENT                     }   ) ;
     $parameter_hash{TIMEOUT}    = 60                                 
 	unless( $parameter_hash{ TIMEOUT                        }   ) ;
@@ -406,7 +461,6 @@ my \$foo = HTML::Miner->new (
 }
 
 
-
 =head2 get_links
 
 This function extracts all URLs from a web page.
@@ -471,8 +525,8 @@ sub get_links {
 
     my @result_arr   ;
 
-    my $user_agent = "Html_Miner/0.01" ;
-    my $timeout    = 60                ; 
+    my $user_agent = "Html_Miner/$VERSION" ;
+    my $timeout    = 60                    ; 
 
 
     ## First extract all required information.
@@ -585,6 +639,154 @@ sub get_links {
 
 
     return \@result_arr;
+
+}
+
+
+
+=head2 get_page_css_and_js
+
+This function extracts all CSS style sheets and JS Script files use on a web page.
+
+Syntax:
+
+   When called on an HTML::Miner Object :
+ 
+          $retun_element = $html_miner->get_page_css_and_js(
+               CONVERT_URLS_TO_ABS       =>    0/1                         [ Optional argument, default is 1 ]
+          );
+
+   When called directly                 :
+
+          $retun_element = get_page_css_and_js( 
+               URL                       =>    $url                     , 
+               HTML                      =>    $optionally_html_of_url  ,   
+               CONVERT_URLS_TO_ABS       =>    0/1                      ,  [ Optional argument, default is 1 ]
+          );
+
+   The direct call is intended to be a simplified version of OO call 
+       and so does not allow for customization of the useragent and so on!
+
+
+Output:
+
+This function ( regardless of how its called ) returns a pointer to a Hash [ JS or CSS ] of Arrays containing the URLs
+
+    $->HASH->{ 
+          "CSS"   => Array( "extracted url1", "extracted url2", .. )
+          "JS"    => Array( "extracted url1", "extracted url2", .. )
+      }
+
+So, to access the URL of the second CSS style sheet found you would use (again the order is maintained):
+
+     $$retun_element{ "CSS" }[1];
+
+Or
+     
+     $css_data = @{ $retun_element->{ "CSS" } }    ;
+     $second_css_url_found = $css_data[1]          ;
+
+What if I want to extract CSS and JS links from a HTML snippet and don't care about the url of that page?
+
+    Simply set CONVERT_URLS_TO_ABS to 0 and everything should be fine. 
+
+
+=cut 
+
+sub get_page_css_and_js { 
+
+    my $number_of_arguments = @_ ;
+
+    my $self                     ;
+    unless( int( $number_of_arguments / 2 ) * 2 == $number_of_arguments ) { # Odd number of elems, Must have been called on Obj.
+	$self = shift               ;
+    }
+
+    my %params = @_   ;
+
+    $params{ CONVERT_URLS_TO_ABS } = 1 unless( defined( $params{ CONVERT_URLS_TO_ABS } ) );
+
+    my $url          ;
+    my $html         ;
+
+    my $user_agent = "Html_Miner/$VERSION" ;
+    my $timeout    = 60                    ; 
+
+
+    ## First extract all required information.
+
+    if( defined( $self ) ) { 
+	if( UNIVERSAL::isa( $self, 'HTML::Miner' )  ) { 
+	    $url  = $self->{ CURRENT_URL      } ;
+	    $html = $self->{ CURRENT_URL_HTML } ;
+	} else { 
+	    croak( "get_page_css_and_js called with params I can't understand!" );
+	}
+    } else { 
+	
+	$url = $params{ URL }               ;
+
+	## Check for validity of url! 
+	my ( $tmp, $protocol, $domain_name, $uri ) =  
+	    _convert_to_valid_url( $url )   ;
+	$url = $tmp                         ;
+
+	my $html_has_been_passed = defined( $params{ HTML } ) ? 1 : 0 ;
+
+	
+	if( $html_has_been_passed ) { 
+	    $html = $params{ HTML }         ;
+	} else { 
+
+	    ## Need to retrieve html 
+	
+	    eval { 
+		require LWP::UserAgent      ;
+		require HTTP::Request       ;
+	    }; 
+	    croak( "LWP::UserAgent and HTTP::Request are required if the url is to be fetched!" ) 
+		if( $@ );
+
+	    $html = _get_url_html( $url, $user_agent, $timeout )   ;
+	    
+	} ## HTML Not passed
+
+
+    }  ## Not called on Object.
+
+
+    ## Now start extracting the URLs
+
+    ## CSS
+
+    my @css_files ;
+    while ( $html =~ m/(<link [^<]*?href=\"([^\"]+?\.css[^"]*?)\")/gis) {  
+	my $css_url = $2 ;
+	if( $params{ CONVERT_URLS_TO_ABS } ) { 
+	    $css_url = get_absolute_url( $url, $2 ) ;
+	} 
+	push @css_files, $css_url ;
+    }
+
+
+
+    ## JS
+
+    my @js_files  ;
+    while ( $html =~ m/(<script [^<]*?src=\"([^\"]+?\.js[^"]*?)\")/gis) {  
+	my $css_url = $2 ;
+	if( $params{ CONVERT_URLS_TO_ABS } ) { 
+	    $css_url = get_absolute_url( $url, $2 ) ;
+	} 
+	push @js_files, $css_url ;
+    }
+
+
+    my %result_hash       ;
+    $result_hash{ 'CSS' } = \@css_files ;
+    $result_hash{ 'JS'  } = \@js_files  ;
+
+    return \%result_hash  ;
 
 }
 
@@ -850,8 +1052,8 @@ sub get_redirect_destination {
     my $user_agent  =  shift ;
     my $timeout     =  shift ;
 
-    $user_agent = "Perl_HTML_Miner/0.01" unless( $user_agent                ) ;
-    $timeout    = 60                     unless( $timeout and $timeout != 0 ) ;
+    $user_agent = "Perl_HTML_Miner/$VERSION" unless( $user_agent                ) ;
+    $timeout    = 60                         unless( $timeout and $timeout != 0 ) ;
 
     if( UNIVERSAL::isa( $url, 'HTML::Miner' )  ) { 
 	croak( "'get_redirect_destination' is not to be called on the HTML::Miner object - please see documentation for usage." );
@@ -950,8 +1152,8 @@ sub get_images {
 
     my @result_arr   ;
 
-    my $user_agent = "Html_Miner/0.01" ;
-    my $timeout    = 60                ; 
+    my $user_agent = "Html_Miner/$VERSION" ;
+    my $timeout    = 60                    ;  
 
     my $domain       ;
     
@@ -1130,10 +1332,10 @@ sub get_meta_elements {
     croak( "'get_meta_elements' requires either the URL or the page HTML when not called on the HTML::Miner Object!" )
 	unless( $tmp[0] )              ;
     
-    my $html                           ;
+    my $html                               ;
 
-    my $user_agent = "Html_Miner/0.01" ;
-    my $timeout    = 60                ; 
+    my $user_agent = "Html_Miner/$VERSION" ;
+    my $timeout    = 60                    ; 
     
 
     ## Extract parameters
@@ -1242,13 +1444,6 @@ sub get_meta_elements {
 
 
     return \%return_hash ;
-    
-
-    
-
-
-	
-
 
 }
 
@@ -1382,6 +1577,10 @@ L<http://cpanratings.perl.org/d/HTML-Miner>
 L<http://search.cpan.org/dist/HTML-Miner/>
 
 =back
+
+=head1 ACKNOWLEDGEMENTS
+
+Thanks to user B<ultranerds> from L<http://perlmonks.org/?node_id=721567> for suggesting and helping with JS and CSS extraction.
 
 =head1 COPYRIGHT & LICENSE
 

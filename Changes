@@ -5,3 +5,6 @@ Revision history for HTML-Miner
 
 0.03    Jan 2011
         Fixed URL parsing Bug.
+
+0.05    Jan 2011
+        Added ability to extract JS and CSS files

@@ -6,7 +6,7 @@ NAME
 
 VERSION 
 
-	Version 0.03
+	Version 0.05
 
 SYNOPSIS 
 
@@ -21,16 +21,24 @@ SYNOPSIS
 	     URL Protocol
 	     URL URI
 	     URL Absolute location
-	     Find all images and for each image extract:
+
+	Find all images and for each image extract:
+
 	     IMG Source URL
 	     IMG Absolute Source URL
 	     IMG Source Domain
-	     Extracts Meta Elements such as
+
+        Extracts Meta Elements such as
+
 	     Page Title
 	     Page Description
 	     Page Keywords
 	     Page RSS Feeds
-	     Finds the final destination URL of a potentially redirecting URL.
+
+        Finds the final destination URL of a potentially redirecting URL.
+
+        Find all JS and CSS files used withing the HTML and find their absolute URL if required.
+
 
 
 	Example ( Object Oriented Usage )
@@ -41,17 +49,18 @@ SYNOPSIS
     	     # or $html = do{local $/;<DATA>}; with __DATA__ provided
 
     	     my $foo = HTML::Miner->new ( 
-
       	     	CURRENT_URL                   => 'www.perl.org'   , 
       		CURRENT_URL_HTML              => $html 
-
     	     );
 
 
     	     my $meta_data =  $html_miner->get_meta_elements() ;
-	     my $links = $html_miner->get_links();
-    	     my $images = $html_miner->get_images();
+	     my $links     = $html_miner->get_links()          ;
+    	     my $images    = $html_miner->get_images()         ;
+
     	     my ( $clear_url, $protocol, $domain, $uri ) = $html_miner->break_url();  
+
+	     my $css_and_js =  $html_miner->get_page_css_and_js()  ;
 
     	     my $out = HTML::Miner::get_redirect_destination( "redirectingurl_here.html" ) ;
 
@@ -67,10 +76,17 @@ SYNOPSIS
 
     	     my $url = "http://www.perl.org";
 
-    	     my $meta_data =  HTML::Miner::get_meta_elements( $url, $html ) ;
-    	     my $links = HTML::Miner::get_links( $url, $html );
-    	     my $images = HTML::Miner::get_images( $url, $html );
+    	     my $meta_data  =  HTML::Miner::get_meta_elements( $url, $html ) ;
+    	     my $links      = HTML::Miner::get_links( $url, $html )          ;
+    	     my $images     = HTML::Miner::get_images( $url, $html )         ;
+
     	     my ( $clear_url, $protocol, $domain, $uri ) = HTML::Minerbreak_url( $url );  
+
+	     my $css_and_js = get_page_css_and_js( 
+             	URL                       =>    $url                     , 
+		HTML                      =>    $optionally_html_of_url  ,   
+           	CONVERT_URLS_TO_ABS       =>    0/1                      ,  [ Optional argument, default is 1 ]
+             );	     
 
     	     my $out = HTML::Miner::get_redirect_destination( "redirectingurl_here.html" ) ;
 
@@ -90,6 +106,10 @@ SYNOPSIS
           		     <link rel="alternate" type="application/rss+xml" title="Title" href="http://www.othersite.com/feed/" />
           		     <link rel="alternate" type="application/rdf+xml" title="Title" href="my_domain_to_mine.com/feed/" /> 
           		     <link rel="alternate" type="text/xml" title="Title" href="http://www.other.org/feed/rss/" />
+			     <script type="text/javascript" src="http://static.myjsdomain.com/frameworks/barlesque.js"></script>
+          		     <script type="text/javascript" src="http://js.revsci.net/gateway/gw.js?csid=J08781"></script>
+          		     <script type="text/javascript" src="/about/other.js"></script>
+          		     <link rel="stylesheet" type="text/css" href="http://static.mycssdomain.com/frameworks/style/main.css";  />
       			 </head>
       			 <body>
       
@@ -138,6 +158,43 @@ SYNOPSIS
 
 
 
+
+		my $css_and_js =  $html_miner->get_page_css_and_js(
+         	   CONVERT_URLS_TO_ABS       =>    0
+    		);
+
+		# $css_and_js will contain:
+    		#    {
+    		#      CSS => [
+    		#         "http://static.mycssdomain.com/frameworks/style/main.css";,
+    		#         "/rel_cssfile.css",
+    		#        ],
+    		#      JS  => [
+    		#          "http://static.myjsdomain.com/frameworks/barlesque.js";,
+    		#          "http://js.revsci.net/gateway/gw.js?csid=J08781";,
+    		#          "/about/rel_jsfile.js",
+    		#        ],
+    		#    }
+
+    		my $css_and_js =  $html_miner->get_page_css_and_js(
+         	   CONVERT_URLS_TO_ABS       =>    1
+    		);
+
+		# $css_and_js will contain:
+    		#    {
+    		#      CSS => [
+    		#         "http://static.mycssdomain.com/frameworks/style/main.css";,
+    		#         "http://www.perl.org/rel_cssfile.css";,
+   		#        ],
+    		#      JS  => [
+    		#          "http://static.myjsdomain.com/frameworks/barlesque.js";,
+    		#          "http://js.revsci.net/gateway/gw.js?csid=J08781";,
+    		#          "http://www.perl.org/about/rel_jsfile.js";,
+    		#        ],
+    		#    }
+
+
+
     		my ( $clear_url, $protocol, $domain, $uri ) = $html_miner->break_url();  
 
     		# $clear_url   =>  "http://my_domain_to_mine.com/my_page_to_mine.pl"
@@ -168,7 +225,7 @@ SYNOPSIS
 
 EXPORT 
 
-This Module does not export anything through @EXPORT, however does export the following function through @EXPORT_OK
+This Module does not export anything through @EXPORT, however does export the following functions through @EXPORT_OK
 
      get_links
      get_absolute_url
@@ -176,7 +233,7 @@ This Module does not export anything through @EXPORT, however does export the fo
      get_redirect_destination
      get_images
      get_meta_elements
-
+     get_page_css_and_js
 
 
 INSTALLATION

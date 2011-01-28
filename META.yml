@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               HTML-Miner
-version:            0.03
+version:            0.05
 abstract:           This Module 'Mines' (hopefully) useful information for an URL or HTML snippet.
 author:
     - Harish T Madabushi <harish.tmh@gmail.com>

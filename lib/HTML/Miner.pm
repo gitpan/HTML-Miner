@@ -1,11 +1,13 @@
-package HTML::Miner                ;
+package HTML::Miner          ;
 
-use Carp                           ;
-use strict                         ;
-use warnings                       ;
+use 5.006                    ;
 
-use Exporter                       ;
+use strict                   ;
+use warnings FATAL => 'all'  ;
 
+use Carp                     ;
+
+use Exporter                 ;
 
 
 =head1 NAME
@@ -14,11 +16,11 @@ HTML::Miner - This Module 'Mines' (hopefully) useful information for an URL or H
 
 =head1 VERSION
 
-Version 0.05
+Version 1.02
 
 =cut
 
-our $VERSION = '0.05';
+our $VERSION = '1.02';
 
 =head1 SYNOPSIS
 
@@ -85,12 +87,12 @@ Finds the final destination URL of a potentially redirecting URL.
 
 =item * 
 
-Find all JS and CSS files used withing the HTML and find their absolute URL if required.
+Find all JS and CSS files used within the HTML and find their absolute URL if required.
 
 =back 
 
 
-Example ( Object Oriented Usage )
+=head2 Example ( Object Oriented Usage )
 
     use HTML::Miner;
 
@@ -118,7 +120,7 @@ Example ( Object Oriented Usage )
     my $out = HTML::Miner::get_absolute_url( "www.perl.com/help/faq/", "../../about/" );
 
 
-Example ( Direct access of Methods )    
+=head2 Example ( Direct access of Methods )    
 
     use HTML::Miner;
 
@@ -146,7 +148,7 @@ Example ( Direct access of Methods )
 
 
 
-Testing HTML
+=head2 Test Data 
 
     __DATA__
 
@@ -179,12 +181,9 @@ Testing HTML
       
       </body>
       </html>
-      
 
 
-
-
-Example Output:
+=head2 Example Output:
 
 
     my $meta_data =  $html_miner->get_meta_elements() ;
@@ -284,58 +283,37 @@ Example Output:
 
 =head1 EXPORT
 
-This Module does not export anything through @EXPORT, however does export the 
-following functions through @EXPORT_OK
-
-=over 7
-
-=item get_links
-
-=item get_absolute_url
-
-=item break_url
-
-=item get_redirect_destination
-
-=item get_images
-
-=item get_meta_elements
-
-=item get_page_css_and_js
-
-=back
+This Module does not export anything through @EXPORT, however does export all externally 
+available functions through @EXPORT_OK
 
 =cut
 
 our @ISA = qw(Exporter);
 
-our @EXPORT_OK = qw( get_links get_absolute_url break_url get_redirect_destination get_images get_meta_elements get_page_css_and_js );
+our @EXPORT_OK = qw( get_links get_absolute_url break_url get_redirect_destination get_redirect_destination_thread_safe get_images get_meta_elements get_page_css_and_js );
 
-=head1 FUNCTIONS
+=head1 SUBROUTINES/METHODS
 
 The following functions are all available directly and through the HTML::Miner Object.
 
-=head2 Constructor new
+=head2 new
 
 The constructor validates the input data and retrieves a URL if the HTML is not provided.
 
 The constructor takes the following parameters:
 
   my $foo = HTML::Miner->new ( 
+      CURRENT_URL                   => 'www.site_i_am_crawling.com/page_i_am_crawling.html'   , # REQUIRED - 'new' will croak 
+                                                                                                  #           if this is not provided. 
+      CURRENT_URL_HTML              => 'long string here'                                     , # Optional -  Will be extracted 
+                                                                                                  #      from CURRENT_URL if not provided. 
+      USER_AGENT                    => 'Perl_HTML_Miner/$VERSION'                             , # Optional - default: 
+                                                                                                  #      'Perl_HTML_Miner/$VERSION'
+      TIMEOUT                       => 5                                                      , # Optional - default: 5 ( Seconds )
 
-      ## New will croak if this is not provided. 
-      CURRENT_URL                   => 'www.site_i_am_crawling.com/page_i_am_crawling.html'   , 
-      ## Optional, will be extracted if this is not provided. 
-      CURRENT_URL_HTML              => 'long string here'                                     ,  
-      ## Will use default if not provided, 
-      USER_AGENT                    => 'Perl_HTML_Miner/$VERSION'                             ,  
-      ## Will use default if not provided, 
-      TIMEOUT                       => 5                                                      ,
-
-      DEBUG                         => 0                                                       
+      DEBUG                         => 0                                                      , # Optional - default: 0
 
   );
-
 
 =cut
 
@@ -351,17 +329,19 @@ sub new {
 
 Usage:
 
-my \$foo = HTML::Miner->new ( 
 
-   CURRENT_URL                   => 'www.site_i_am_crawling.com/page_i_am_crawling.html'    ,  ## New will croak if this is not provided. 
-   CURRENT_URL_HTML              => 'long string here'                                      ,  ## Optional, will be extracted if this is not provided. 
+  my \$foo = HTML::Miner->new ( 
+      CURRENT_URL                   => 'www.site_i_am_crawling.com/page_i_am_crawling.html'   , # REQUIRED - 'new' will croak 
+                                                                                                  #           if this is not provided. 
+      CURRENT_URL_HTML              => 'long string here'                                     , # Optional -  Will be extracted 
+                                                                                                  #      from CURRENT_URL if not provided. 
+      USER_AGENT                    => 'Perl_HTML_Miner/$VERSION'                             , # Optional - default: 
+                                                                                                  #      'Perl_HTML_Miner/$VERSION'
+      TIMEOUT                       => 5                                                      , # Optional - default: 5 ( Seconds )
 
-   USER_AGENT                    => 'Perl_HTML_Miner/$VERSION'                              ,  ## Will use default if not provided, 
-   TIMEOUT                       => 5                                                       ,
+      DEBUG                         => 0                                                      , # Optional - default: 0
 
-   DEBUG                         => 0                                                       ,
-
-);
+  );
 
 ";
 
@@ -397,11 +377,11 @@ my \$foo = HTML::Miner->new (
     if( $require_extract ) { 
 	
 	eval { 
-	    require LWP::UserAgent;
-	    require HTTP::Request;
+	    require LWP::UserAgent ;
+	    require HTTP::Request  ;
 	}; croak( "LWP::UserAgent and HTTP::Request are required if the url is to be fetched!" ) 
 	    if( $@ );
-
+	
 	my $tmp;
 	( $parameter_hash{ CURRENT_URL }, $tmp, $tmp, $tmp ) =  _convert_to_valid_url( $parameter_hash{ CURRENT_URL } );
 
@@ -420,8 +400,6 @@ my \$foo = HTML::Miner->new (
 	_convert_to_valid_url( $parameter_hash{ CURRENT_URL } );
 
     $parameter_hash{ CURRENT_URL } = $url;
-
-
 
     my $self = {
 
@@ -465,8 +443,7 @@ my \$foo = HTML::Miner->new (
 
 This function extracts all URLs from a web page.
 
-
-Syntax:
+B<Syntax:>
 
    When called on an HTML::Miner Object :
  
@@ -480,7 +457,7 @@ Syntax:
        and so does not allow for customization of the useragent and so on!
 
 
-Output:
+B<Output:>
 
 This function ( regardless of how its called ) returns a pointer to an Array of Hashes who's structure is as follows:
 
@@ -503,15 +480,14 @@ So, to access the title of the second URL found you would use (yes the order is 
 
      @{ $retun_element }[1]->{ TITLE }
 
-NOTE:
+B<NOTES:>
 
     If ABS_EXISTS is 0 then DOMAIN, DOMAIN_IS_BASE, PROTOCOL and URI will be undefined
 
-What if I want to extract URLs from a HTML snippet and don't care about the url of that page?
+    To extract URLs from a HTML snippet when one does not care about the url of that page, simply pass some garbage as the URL 
+         and ignore everything except URL, TITLE and ANCHOR
 
-    Well simply pass some garbage as the URL and ignore everything except
-       URL, TITLE and ANCHOR
-
+    "ANCHOR" might contain HTML such as <span>, use HTML::Strip if required. 
 
 =cut 
 
@@ -570,9 +546,7 @@ sub get_links {
 	} ## HTML Not passed
 
 
-    }     ## Not called on Object.
-
-
+    }  ## Not called on Object.
 
 
     ## Now start extracting the URLs
@@ -595,7 +569,6 @@ sub get_links {
 	    $this_abs_url = get_absolute_url( $url, $this_url );
 
 	}; $this_abs_url_exists = 0 if( $@ );
-
 
 	my $this_domain                 ;
 	my $this_domain_is_base_domain  ;
@@ -643,32 +616,31 @@ sub get_links {
 }
 
 
-
 =head2 get_page_css_and_js
 
 This function extracts all CSS style sheets and JS Script files use on a web page.
 
-Syntax:
+B<Syntax:>
 
    When called on an HTML::Miner Object :
  
           $retun_element = $html_miner->get_page_css_and_js(
-               CONVERT_URLS_TO_ABS       =>    0/1                         [ Optional argument, default is 1 ]
+               CONVERT_URLS_TO_ABS       =>    0/1                         [ B<Optional> argument, default is 1 ]
           );
 
    When called directly                 :
 
           $retun_element = get_page_css_and_js( 
                URL                       =>    $url                     , 
-               HTML                      =>    $optionally_html_of_url  ,   
-               CONVERT_URLS_TO_ABS       =>    0/1                      ,  [ Optional argument, default is 1 ]
+               HTML                      =>    $optionally_html_of_url  ,  [ B<Optional> argument, html extracted if not provided ] 
+               CONVERT_URLS_TO_ABS       =>    0/1                      ,  [ B<Optional> argument, default is 1                   ]
           );
 
    The direct call is intended to be a simplified version of OO call 
        and so does not allow for customization of the useragent and so on!
 
 
-Output:
+B<Output:>
 
 This function ( regardless of how its called ) returns a pointer to a Hash [ JS or CSS ] of Arrays containing the URLs
 
@@ -682,13 +654,12 @@ So, to access the URL of the second CSS style sheet found you would use (again t
      $$retun_element{ "CSS" }[1];
 
 Or
-     
      $css_data = @{ $retun_element->{ "CSS" } }    ;
      $second_css_url_found = $css_data[1]          ;
 
-What if I want to extract CSS and JS links from a HTML snippet and don't care about the url of that page?
+B<NOTES:>
 
-    Simply set CONVERT_URLS_TO_ABS to 0 and everything should be fine. 
+To extract CSS and JS links from a HTML snippet when one does not care about the url of that page, simply set CONVERT_URLS_TO_ABS to 0 and everything should be fine. 
 
 
 =cut 
@@ -709,9 +680,8 @@ sub get_page_css_and_js {
     my $url          ;
     my $html         ;
 
-    my $user_agent = "Html_Miner/$VERSION" ;
-    my $timeout    = 60                    ; 
-
+    my $user_agent = "Perl_Html_Miner/$VERSION" ;
+    my $timeout    = 60                         ;
 
     ## First extract all required information.
 
@@ -793,11 +763,9 @@ sub get_page_css_and_js {
 
 =head2 get_absolute_url 
 
+This function takes as arguments the base URL whithin the HTML of which a second (possibly relative URL ) URL was found, and returns the absolute location of that second URL.
 
-This function takes as arguments the base URL whithin the HTML of which a second (possibly reletive URL ) URL was found, and returns the absolute location of that second URL.
-
-
-Example:
+B<Example:>
     
     my $out = HTML::Miner::get_absolute_url( "www.perl.com/help/fag/", "../../about/" )
 
@@ -806,9 +774,9 @@ Example:
           www.perl.com/about/
 
 
-NOTE: 
+B<NOTE:>
 
-    This function can not be called on the HTML::Miner Object. 
+    This function cannot be called on the HTML::Miner Object. 
     The function get_links does this for all URLs found on a webpage. 
 
 
@@ -818,15 +786,11 @@ NOTE:
 sub get_absolute_url {
 
     my $contained_page_url    = shift ;
-    my $possible_reletive_url = shift ;
-
+    my $possible_relative_url = shift ;
 
     if( UNIVERSAL::isa( $contained_page_url, 'HTML::Miner' )  ) { 
 	croak( "'get_absolute_url' is not to be called on the HTML::Miner object - please see documentation for usage." );
     }
-
-
-
 
     my $absolute_url                  ;
 
@@ -835,26 +799,26 @@ sub get_absolute_url {
     $contained_page_url = $tmp                    ;
 
 
-    ## First check if the $possible_reletive_url is already absolute.
+    ## First check if the $possible_relative_url is already absolute.
 
-    if( $possible_reletive_url =~ /http:\/\// ) { 
+    if( $possible_relative_url =~ /http(s)?:\/\// ) {
 
 	eval {
 
 	    my $tmp;
-	    ( $possible_reletive_url, $tmp, $tmp, $tmp ) =  
-		_convert_to_valid_url( $possible_reletive_url ) ;
+	    ( $possible_relative_url, $tmp, $tmp, $tmp ) =  
+		_convert_to_valid_url( $possible_relative_url ) ;
 	}; 
 	if( $@ ) {
-	    croak( "Reletive url is of a form I do not understand!" ) ;
+	    croak( "Relative url is of a form I do not understand!" ) ;
 	} else {
-	    return $possible_reletive_url;
+	    return $possible_relative_url;
 	}
 
     }
     
     
-    ## The different kinds of Reletive URLs are as follows:
+    ## The different kinds of Relative URLs are as follows:
     ##     (../)*something
     ##     ./something
     ##     /something
@@ -863,39 +827,39 @@ sub get_absolute_url {
 
 
 
-    if( $possible_reletive_url =~ m/^#.+/ ) { 
+    if( $possible_relative_url =~ m/^#.+/ ) { 
 
 	$absolute_url = $contained_page_url;
-	$absolute_url = $absolute_url.$possible_reletive_url;
+	$absolute_url = $absolute_url.$possible_relative_url;
 
 	## Redundant check - but I just think else if makes code messy!!
 
 	eval {
 	    my ( $tmp_rel, $protocol_rel, $domain_name_rel, $uri_rel ) =  
 		_convert_to_valid_url( $absolute_url ) ;
-	}; croak( "Reletive url is of a form I do not understand!" ) if( $@ );
+	}; croak( "Relative url is of a form I do not understand!" ) if( $@ );
 
 	return $absolute_url;
 
     }
 
-    if( $possible_reletive_url =~ m/^\// or $possible_reletive_url =~ m/^\.\// ) { 
+    if( $possible_relative_url =~ m/^\// or $possible_relative_url =~ m/^\.\// ) { 
 	
-	$possible_reletive_url =~ s/^\.//;
-	$absolute_url = $protocol."://".$domain_name.$possible_reletive_url;
+	$possible_relative_url =~ s/^\.//;
+	$absolute_url = $protocol."://".$domain_name.$possible_relative_url;
 	
 
 	eval {
 	    my ( $tmp_rel, $protocol_rel, $domain_name_rel, $uri_rel ) =  
 		_convert_to_valid_url( $absolute_url ) ;
-	}; croak( "Reletive url is of a form I do not understand!" ) if( $@ );
+	}; croak( "Relative url is of a form I do not understand!" ) if( $@ );
 
 	return $absolute_url;
 
     }
 
 
-    if( $possible_reletive_url =~ /^\.\./ )   { 
+    if( $possible_relative_url =~ /^\.\./ )   { 
 
 	my $dirs = $uri;
 	$dirs =~ s/[^\/]*?$//g;
@@ -903,7 +867,7 @@ sub get_absolute_url {
 
 	my @path_info = split( /\//, $dirs );
 
-	my $back_track = $possible_reletive_url;
+	my $back_track = $possible_relative_url;
 	my @back_track = split( /\.\.\//, $back_track );
 
 	my $times_to_back_track = @back_track;
@@ -915,12 +879,12 @@ sub get_absolute_url {
 
 	my $dir_to_absolute_path = join( '/', @path_info, );
 	
-	my $additional_dir_to_absolute_path = $possible_reletive_url;
+	my $additional_dir_to_absolute_path = $possible_relative_url;
 	$additional_dir_to_absolute_path =~ s/[^\/]*?$//g;
 
 	$additional_dir_to_absolute_path =~ s/(\.\.\/)+//g;
 
-	my $absolute_url_file_name = $possible_reletive_url;
+	my $absolute_url_file_name = $possible_relative_url;
 	$absolute_url_file_name =~ s/^.*\///g;
 
 	$absolute_url = "$protocol://".
@@ -933,7 +897,7 @@ sub get_absolute_url {
 	eval {
 	    my ( $tmp_rel, $protocol_rel, $domain_name_rel, $uri_rel ) =  
 		_convert_to_valid_url( $absolute_url ) ;
-	}; croak( "Reletive url is of a form I do not understand!" ) if( $@ );
+	}; croak( "Relative url is of a form I do not understand!" ) if( $@ );
 
 	return $absolute_url;
 
@@ -941,23 +905,23 @@ sub get_absolute_url {
 
 
 
-    ## Check if possible_reletive_url is of for something.
+    ## Check if possible_relative_url is of for something.
 
     $absolute_url = $contained_page_url;
     $absolute_url =~ s/[^\/]+$//;
-    $absolute_url = $absolute_url.$possible_reletive_url;
+    $absolute_url = $absolute_url.$possible_relative_url;
     
     eval {
 	my ( $tmp_rel, $protocol_rel, $domain_name_rel, $uri_rel ) =  
 	    _convert_to_valid_url( $absolute_url ) ;
     }; 
     if( $@ ) {
-	croak( "Reletive url is of a form I do not understand!" ) ;
+	croak( "Relative url is of a form I do not understand!" ) ;
     } else { 
 	return $absolute_url;
     }
 
-    croak( "Reletive url is of a form I do not understand!" ) ;
+    croak( "Relative url is of a form I do not understand!" ) ;
     
 }
 
@@ -966,6 +930,9 @@ sub get_absolute_url {
 =head2 break_url
 
 This function, given an URL, returns the Domain, Protocol, URI and the input URL in its 'standard' form.
+
+
+B<Syntax:>
 
 It is called on the HTML::Miner Object as follows:
 
@@ -979,7 +946,7 @@ It is called directly as follows:
     my ( $clear_url, $protocol, $domain, $uri ) = $break_url( 'www.perl.org/help/faq/' );
 
 
-Example returned Values:
+B<Output:>
 
     Input
    
@@ -1020,17 +987,14 @@ sub break_url {
 }
 
 
-
 =head2 get_redirect_destination
 
-This function takes as argument a URL that is potentially redirected to another and another and ... URL 
+This function takes, as argument, an URL that is potentially redirected to another and another and ... URL
 and returns the FINAL destination URL.
 
-This function REQUIRES to access the web each time its called.
+This function REQUIRES access to the web.
 
-This function CAN NOT be called on the HTML::Miner Object.
-
-Example:
+B<Example:>
 
     my $destination_url = HTML::Miner::get_redirect_destination( 
        'http://rss.cnn.com/~r/rss/edition_world/~3/403863461/index.html' , 
@@ -1042,7 +1006,14 @@ Example:
 
        "http://edition.cnn.com/2008/WORLD/americas/09/26/russia.chavez/index.html?eref=edition_world"
 
+B<NOTES:> 
 
+   This function CANNOT be called on the HTML::Miner Object.
+
+B<WARNING:>
+
+   This function is NOT thread safe, use get_redirect_destination_thread_safe ( described below ) if this function is 
+     being used within a thread and there is a chance that any of the interim redirect URLs are HTTPS.
 
 =cut
 
@@ -1064,8 +1035,7 @@ sub get_redirect_destination {
 	    _convert_to_valid_url( $url ) ;
     }; croak( $@ ) if( $@ );
 
-
-    eval{
+    eval {
 
 	require HTTP::Request  ;
 	require LWP::UserAgent ;
@@ -1077,15 +1047,105 @@ sub get_redirect_destination {
 	GET => $url
 	);
 
-    my $ua = LWP::UserAgent->new;
-    $ua->timeout( $timeout );
-    $ua->env_proxy;
-    $ua->agent( $user_agent ) ;
+    my $ua = LWP::UserAgent->new  ;
+    $ua->timeout( $timeout )      ;
+    $ua->env_proxy                ;
+    $ua->agent( $user_agent )     ;
     
-    my $response = $ua->request( $request );
-    my $redirect_url =  $response->base;
+    my $response     = $ua->request( $request ) ;
+    my $redirect_url = $response->base          ;
     
     return ( $redirect_url );
+
+}
+
+
+=head2 get_redirect_destination_thread_safe
+
+This function takes, as argument, an URL that is potentially redirected to another and another and ... URL
+and returns the FINAL destination URL and is thread safe.
+
+This function REQUIRES access to the web.
+
+B<Example:>
+
+    my $destination_url = HTML::Miner::get_redirect_destination( 
+       'on.fb.me/qoBoK' , 
+       'optional_user_agent',
+       'optional_timeout'
+    );
+
+    $destination_url will contain:
+
+       "https://www.facebook.com"
+
+B<NOTES:> 
+
+   This function CANNOT be called on the HTML::Miner Object.
+   This function hits the web for each redirect that it tracks - So to find the redirect of an URL that redirects 15 times it will
+        access the web 15 times. Do NOT use this function instead of get_redirect_destination unless you have to. 
+
+=cut
+
+sub get_redirect_destination_thread_safe {
+
+    my $url         =  shift ;
+    my $user_agent  =  shift ;
+    my $timeout     =  shift ;
+    my $attempts    =  shift ;
+
+    if( UNIVERSAL::isa( $url, 'HTML::Miner' )  ) { 
+	croak( "'get_redirect_destination_thread_safe' is not to be called on the HTML::Miner object - please see documentation for usage." );
+    }
+
+    eval { 
+	my( $unused1, $unused2, $unused3, $unused4 ) = 	    
+	    _convert_to_valid_url( $url ) ;
+    }; croak( $@ ) if( $@ );
+
+    eval {
+
+	require HTTP::Request  ;
+	require LWP::UserAgent ;
+
+    }; croak( "'get_redirect_destination_thread_safe' requires HTTP::Request and LWP::UserAgent, please see documentation for more details." ) if( $@ );
+
+    ## Critical for thread safe ... Can not find redirect of https locations.
+    if( $url =~ /^https/ ) { 
+	return $url ;
+    }
+
+    { 
+	# Check if url is just http://something.something... with no slash at all - redirect beyond that is no point. 
+	my $no_http_url = $url            ;
+	$no_http_url    =~ s/http:\/\///g ;
+	return $url unless( $no_http_url =~ /\// ) ;
+    }
+
+
+    $user_agent = "Perl_HTML_Miner/$VERSION" unless( $user_agent                ) ;
+    $timeout    = 60                         unless( $timeout and $timeout != 0 ) ;
+    $attempts   = 0                          unless( $attempts                  ) ;
+
+    my $request = HTTP::Request->new(
+        GET => $url
+        );
+
+    my $ua = LWP::UserAgent->new  ;
+    $ua->timeout( $timeout )      ;
+    $ua->env_proxy                ;
+    $ua->agent( $user_agent )     ;
+    $ua->max_redirect( 0 )        ;
+
+    my $response      =  $ua->request( $request ) ;
+
+    my $response_code =  $response->{ _rc }       ;
+
+    if( $response_code == 200 or !( $response_code > 299 and $response_code < 400 ) or $attempts > 7 ) { # Slightly redundant with the 200 but the are separate cases.
+	return $url ;
+    }
+
+    return get_redirect_destination_thread_safe( $response->{ _headers }{ location }, $user_agent, $timeout, ++$attempts ) ;
 
 }
 
@@ -1095,8 +1155,7 @@ sub get_redirect_destination {
 
 This function extracts all images from a web page.
 
-
-Syntax:
+B<Syntax:>
 
    When called on an HTML::Miner Object :
  
@@ -1110,7 +1169,7 @@ Syntax:
        and so does not allow for customization of the useragent and so on!
 
 
-Output:
+B<Output:>
 
 This function ( regardless of how its called ) returns a pointer to an Array of Hashes who's structure is as follows:
 
@@ -1126,19 +1185,17 @@ This function ( regardless of how its called ) returns a pointer to an Array of 
          ... 
     
 )
+
 So, to access the alt text of the second image found you would use (yes the order is maintained):
 
      @{ $retun_element }[1]->{ TITLE }
 
-NOTE:
+B<NOTE:>
 
     If ABS_EXISTS is 0 then IMG_DOMAIN and DOMAIN_IS_BASE will be undefined
 
-What if I want to extract images from a HTML snippet and don't care about the URL of that page?
-
-    Well simply pass some garbage as the URL and ignore everything except absolute locations and of course domains.
-
-
+    To extract images from a HTML snippet when one does not care about the URL of that page, simply pass some garbage as 
+           the URL and ignore everything except absolute locations and domains.
 
 =cut 
 
@@ -1152,8 +1209,8 @@ sub get_images {
 
     my @result_arr   ;
 
-    my $user_agent = "Html_Miner/$VERSION" ;
-    my $timeout    = 60                    ;  
+    my $user_agent = "Perl_Html_Miner/$VERSION" ;
+    my $timeout    = 60                         ;  
 
     my $domain       ;
     
@@ -1280,6 +1337,8 @@ This function retrieves the following meta elements for a given URL (or HTML sni
     Page RSS Feeds
 
 
+B<Syntax:>
+
 It is called through the HTML::Miner Object as follows:
 
     $return_hash = $html_miner->get_meta_elements( );
@@ -1298,6 +1357,9 @@ It is called directly as follows:
           Again this function does not allow for customization of User Agent
           and timeout when called directly. 
 
+
+
+B<Output:>
 
 In either case the returned hash is of the following structure:
     
@@ -1334,8 +1396,8 @@ sub get_meta_elements {
     
     my $html                               ;
 
-    my $user_agent = "Html_Miner/$VERSION" ;
-    my $timeout    = 60                    ; 
+    my $user_agent = "Perl_Html_Miner/$VERSION" ;
+    my $timeout    = 60                         ; 
     
 
     ## Extract parameters
@@ -1447,7 +1509,10 @@ sub get_meta_elements {
 
 }
 
+=head1 INTERNAL SUBROUTINES/METHODS
 
+These functions are used by the module. They are not meant to be called directly using the Net::XMPP::Client::GTalk object although 
+there is nothing stoping you from doing that. 
 
 =head2 _get_url_html
 
@@ -1500,7 +1565,6 @@ sub _convert_to_valid_url {
 
     croak "URL - Malformed beyond recognition!\n" unless( $url );
 
-
     # If missing add trailing slash as per URI rules
     unless( ( $url =~ /\/$/ ) or ( $url =~ /([^\/]\/[^\/]+\.[^\/]+)/ ) ) { 
 	$url = $url."/"; 
@@ -1522,12 +1586,15 @@ sub _convert_to_valid_url {
         $protocol      =       $1 ;
         $domain_name   =       $2 ;
         $uri           = "/" . $4 ;
+	
+	my $domain_name_for_checkes = $domain_name ;
+	$domain_name_for_checkes    = lc( $domain_name_for_checkes ) ;
 
 	croak "URL - $url - Malformed! Sorry I tried to fix it but could not!\n"
 	    unless( 
-		( $domain_name =~ m/[a-z]+[a-z0-9-]*\.[a-z]+/ )
+		( $domain_name_for_checkes =~ m/[a-z0-9-]+(\.[a-z])+/ )
 		or
-		( $domain_name =~ m/\d+\.\d+\.\d+\.\d+/       ) ## Bug id 62877
+		( $domain_name_for_checkes =~ m/\d+\.\d+\.\d+\.\d+/   ) ## Bug id 62877
 	    );
 
     } else {
@@ -1582,14 +1649,46 @@ L<http://search.cpan.org/dist/HTML-Miner/>
 
 Thanks to user B<ultranerds> from L<http://perlmonks.org/?node_id=721567> for suggesting and helping with JS and CSS extraction.
 
-=head1 COPYRIGHT & LICENSE
+=head1 LICENSE AND COPYRIGHT
 
-Copyright (C) 2009 4am Design and Technology Labs Pvt. Ltd. (L<http://www.4am.co.in/>), all rights reserved.
+Copyright (C) 2009 Harish Madabushi, all rights reserved.
 
 This program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself.
+under the terms of the the Artistic License (2.0). You may obtain a
+copy of the full license at:
+
+L<http://www.perlfoundation.org/artistic_license_2_0>
+
+Any use, modification, and distribution of the Standard or Modified
+Versions is governed by this Artistic License. By using, modifying or
+distributing the Package, you accept this license. Do not use, modify,
+or distribute the Package, if you do not accept this license.
+
+If your Modified Version has been derived from a Modified Version made
+by someone other than you, you are nevertheless required to ensure that
+your Modified Version complies with the requirements of this license.
+
+This license does not grant you the right to use any trademark, service
+mark, tradename, or logo of the Copyright Holder.
+
+This license includes the non-exclusive, worldwide, free-of-charge
+patent license to make, have made, use, offer to sell, sell, import and
+otherwise transfer the Package with respect to any patent claims
+licensable by the Copyright Holder that are necessarily infringed by the
+Package. If you institute patent litigation (including a cross-claim or
+counterclaim) against any party alleging that the Package constitutes
+direct or contributory patent infringement, then this Artistic License
+to you shall terminate on the date that such litigation is filed.
+
+Disclaimer of Warranty: THE PACKAGE IS PROVIDED BY THE COPYRIGHT HOLDER
+AND CONTRIBUTORS "AS IS' AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES.
+THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE, OR NON-INFRINGEMENT ARE DISCLAIMED TO THE EXTENT PERMITTED BY
+YOUR LOCAL LAW. UNLESS REQUIRED BY LAW, NO COPYRIGHT HOLDER OR
+CONTRIBUTOR WILL BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, OR
+CONSEQUENTIAL DAMAGES ARISING IN ANY WAY OUT OF THE USE OF THE PACKAGE,
+EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =cut
 
 1; # End of HTML::Miner
-

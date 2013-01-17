@@ -8,3 +8,7 @@ Revision history for HTML-Miner
 
 0.05    Jan 2011
         Added ability to extract JS and CSS files
+
+1.02    Jan 2013
+        Fixed multiple bugs, updated POD, provided thread support
+

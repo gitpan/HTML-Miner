@@ -6,8 +6,6 @@ use HTML::Miner            ;
 
 use Test::More             ;
 
-use Data::Dump qw( dump )  ;
-
 plan tests => 6            ;
 
 

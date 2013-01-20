@@ -12,3 +12,5 @@ Revision history for HTML-Miner
 1.02    Jan 2013
         Fixed multiple bugs, updated POD, provided thread support
 
+1.03    Jan 2013
+        Removed 'use Data::Dump' used for debug that was causing test fails from t/
